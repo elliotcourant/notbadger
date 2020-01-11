@@ -2,6 +2,15 @@
 
 package notbadger
 
+// OpenDir opens a directory in windows with write access for syncing.
+import (
+	"os"
+	"path/filepath"
+	"syscall"
+
+	"github.com/pkg/errors"
+)
+
 // FILE_ATTRIBUTE_TEMPORARY - A file that is being used for temporary storage.
 // FILE_FLAG_DELETE_ON_CLOSE - The file is to be deleted immediately after all of its handles are
 // closed, which includes the specified handle and any other open or duplicated handles.

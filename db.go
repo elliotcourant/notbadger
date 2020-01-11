@@ -81,7 +81,7 @@ func Open(opts Options) (*DB, error) {
 		opts.CompactL0OnClose = false
 	}
 
-	var dirLockGuard, valueDirLockGuard *directoryLockGuard
+	// var dirLockGuard, valueDirLockGuard *directoryLockGuard
 
 	// Create directories and acquire lock on it only if badger is not running in InMemory mode.
 	// We don't have any directories/files in InMemory mode so we don't need to acquire
@@ -92,6 +92,8 @@ func Open(opts Options) (*DB, error) {
 		}
 
 	}
+
+	return nil, nil
 }
 
 func exists(path string) (bool, error) {

@@ -5,12 +5,12 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"github.com/OneOfOne/xxhash"
 	"github.com/elliotcourant/notbadger/options"
 	"github.com/elliotcourant/notbadger/pb"
 	"github.com/elliotcourant/notbadger/z"
 	"github.com/pkg/errors"
 	"github.com/rotisserie/eris"
-	"hash/crc32"
 	"io"
 	"os"
 	"path/filepath"
@@ -162,7 +162,7 @@ func (mf *manifestFile) addChanges(manifestChanges []pb.ManifestChange) error {
 		// TODO (elliotcourant) Maybe the lenCrc buf could be broken into its own method?
 		var lenCrcBuf [8]byte
 		binary.BigEndian.PutUint32(lenCrcBuf[0:4], uint32(len(buf)))
-		binary.BigEndian.PutUint32(lenCrcBuf[4:8], crc32.Checksum(buf, z.CastagnoliCrcTable))
+		binary.BigEndian.PutUint32(lenCrcBuf[4:8], xxhash.Checksum32(buf))
 		buf = append(lenCrcBuf[:], buf...)
 		if _, err := mf.file.Write(buf); err != nil {
 			// TODO (elliotcourant) If an error happens while closing the file maybe the write error should get wrapped so
@@ -243,7 +243,8 @@ func helpRewrite(dir string, m *Manifest) (*os.File, int, error) {
 	// with a checksum of the change set.
 	var lenCrcBuf [8]byte
 	binary.BigEndian.PutUint32(lenCrcBuf[0:4], uint32(len(changeBuf)))
-	binary.BigEndian.PutUint32(lenCrcBuf[4:8], crc32.Checksum(changeBuf, z.CastagnoliCrcTable))
+	binary.BigEndian.PutUint32(lenCrcBuf[4:8], xxhash.Checksum32(changeBuf))
+	binary.BigEndian.PutUint32(lenCrcBuf[4:8], xxhash.Checksum32(changeBuf))
 
 	buf = append(buf, lenCrcBuf[:]...)
 	buf = append(buf, changeBuf...)
@@ -437,7 +438,7 @@ func ReplayManifestFile(file *os.File) (Manifest, int64, error) {
 			return Manifest{}, 0, eris.Wrap(err, "failed to replay manifest file")
 		}
 
-		if crc32.Checksum(buf, z.CastagnoliCrcTable) != binary.BigEndian.Uint32(lenCrcBuf[4:8]) {
+		if xxhash.Checksum32(buf) != binary.BigEndian.Uint32(lenCrcBuf[4:8]) {
 			// TODO (elliotcourant) real error here.
 			panic("bad checksum")
 		}

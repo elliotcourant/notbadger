@@ -1,0 +1,19 @@
+language: go
+
+go:
+  - "1.13"
+
+os:
+  - linux
+  - windows
+  - osx
+
+go_import_path: github.com/elliotcourant/notbadger
+
+install: true
+
+env:
+  - GO111MODULE=on
+
+script:
+  - go test -v -race ./...

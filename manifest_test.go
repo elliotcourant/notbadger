@@ -1,9 +1,9 @@
 package notbadger
 
 import (
+	"github.com/elliotcourant/notbadger/pb"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
-	"notbadger/pb"
 	"testing"
 )
 

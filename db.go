@@ -1,10 +1,10 @@
 package notbadger
 
 import (
+	"github.com/elliotcourant/notbadger/options"
+	"github.com/elliotcourant/notbadger/skiplist"
+	"github.com/elliotcourant/notbadger/z"
 	"github.com/pkg/errors"
-	"notbadger/options"
-	"notbadger/skiplist"
-	"notbadger/z"
 	"os"
 	"sync"
 )

@@ -3,9 +3,9 @@ package skiplist
 import (
 	"encoding/binary"
 	"fmt"
+	"github.com/elliotcourant/notbadger/z"
 	"github.com/stretchr/testify/require"
 	"math/rand"
-	"notbadger/z"
 	"strconv"
 	"sync"
 	"sync/atomic"

@@ -1,7 +1,7 @@
 package skiplist
 
 import (
-	"notbadger/z"
+	"github.com/elliotcourant/notbadger/z"
 	"sync/atomic"
 	"unsafe"
 )
@@ -59,7 +59,6 @@ func (s *Arena) putNode(height int) uint32 {
 	m := (n - l + uint32(nodeAlign)) & ^uint32(nodeAlign)
 	return m
 }
-
 
 // Put will *copy* val into arena. To make better use of this, reuse your input
 // val buffer. Returns an offset into buf. User is responsible for remembering

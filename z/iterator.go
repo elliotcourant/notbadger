@@ -34,6 +34,6 @@ func (v *ValueStruct) Marshal(dst []byte) {
 func (v *ValueStruct) Unmarshal(src []byte) {
 	v.Meta = src[0]
 	v.UserMeta = src[1]
-	v.ExpiresAt = binary.BigEndian.Uint64(src[2:2+8])
+	v.ExpiresAt = binary.BigEndian.Uint64(src[2 : 2+8])
 	v.Value = src[10:]
 }

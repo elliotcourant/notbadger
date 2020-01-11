@@ -3,8 +3,8 @@
 package notbadger
 
 import (
+	"github.com/elliotcourant/notbadger/z"
 	"github.com/pkg/errors"
-	"notbadger/z"
 	"os"
 )
 

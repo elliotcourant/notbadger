@@ -2,10 +2,10 @@ package notbadger
 
 import (
 	"fmt"
+	"github.com/elliotcourant/notbadger/options"
+	"github.com/elliotcourant/notbadger/pb"
+	"github.com/elliotcourant/notbadger/z"
 	"golang.org/x/net/trace"
-	"notbadger/options"
-	"notbadger/pb"
-	"notbadger/z"
 	"os"
 	"sync"
 )

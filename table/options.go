@@ -2,8 +2,8 @@ package table
 
 import (
 	"github.com/dgraph-io/ristretto"
-	"notbadger/options"
-	"notbadger/pb"
+	"github.com/elliotcourant/notbadger/options"
+	"github.com/elliotcourant/notbadger/pb"
 )
 
 type (

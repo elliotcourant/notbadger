@@ -1,4 +1,4 @@
-module notbadger
+module github.com/elliotcourant/notbadger
 
 go 1.13
 

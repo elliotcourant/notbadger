@@ -1,7 +1,7 @@
 package notbadger
 
 import (
-	"notbadger/pb"
+	"github.com/elliotcourant/notbadger/pb"
 	"os"
 	"sync"
 	"time"

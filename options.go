@@ -1,9 +1,9 @@
 package notbadger
 
 import (
+	"github.com/elliotcourant/notbadger/options"
+	"github.com/elliotcourant/notbadger/table"
 	"github.com/elliotcourant/timber"
-	"notbadger/options"
-	"notbadger/table"
 	"time"
 )
 

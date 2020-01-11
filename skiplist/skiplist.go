@@ -1,9 +1,9 @@
 package skiplist
 
 import (
+	"github.com/elliotcourant/notbadger/z"
 	"math"
 	"math/rand"
-	"notbadger/z"
 	"sync/atomic"
 	"unsafe"
 )

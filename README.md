@@ -12,3 +12,10 @@ Most of the code in NotBadger is an exact copy of BadgerDB with only minor chang
 
 NotBadger also aims to provide detailed and in-depth documentation about the inner workings of both
 NotBadger and BadgerDB.
+
+### Differences between NotBadger and BadgerDB
+
+|              | NotBadger          | BadgerDB               |
+|--------------|--------------------|------------------------|
+| Encoding     | Manual             | Protobuf               |
+| Partitioning | Multiple LSM Trees | None (Single LSM Tree) |

@@ -252,7 +252,7 @@ func helpRewrite(dir string, m *Manifest) (*os.File, int, error) {
 	if _, err := file.Write(buf); err != nil {
 		// TODO (elliotcourant) If an error happens while closing the file maybe the write error should get wrapped so
 		//  that the close error is also included.
-		file.Close()
+		_ = file.Close()
 		return nil, 0, err
 	}
 
@@ -260,7 +260,7 @@ func helpRewrite(dir string, m *Manifest) (*os.File, int, error) {
 	if err := z.FileSync(file); err != nil {
 		// TODO (elliotcourant) If an error happens while closing the file maybe the sync error should get wrapped so
 		//  that the close error is also included.
-		file.Close()
+		_ = file.Close()
 		return nil, 0, err
 	}
 
@@ -286,14 +286,14 @@ func helpRewrite(dir string, m *Manifest) (*os.File, int, error) {
 	if _, err := file.Seek(0, io.SeekEnd); err != nil {
 		// TODO (elliotcourant) If an error happens while closing the file maybe the seek error should get wrapped so
 		//  that the close error is also included.
-		file.Close()
+		_ = file.Close()
 		return nil, 0, err
 	}
 
 	if err := syncDir(dir); err != nil {
 		// TODO (elliotcourant) If an error happens while closing the file maybe the sync dir error should get wrapped
 		//  so that the close error is also included.
-		file.Close()
+		_ = file.Close()
 		return nil, 0, err
 	}
 

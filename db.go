@@ -149,30 +149,29 @@ func Open(opts Options) (db *DB, err error) {
 }
 
 func exists(path string) (bool, error) {
-	_, err := os.Stat(path)
-	if err == nil {
+	if _, err := os.Stat(path); err == nil {
 		return true, nil
-	}
-	if os.IsNotExist(err) {
+	} else if os.IsNotExist(err) {
 		return false, nil
+	} else {
+		return true, err
 	}
-	return true, err
 }
 
 func createDirs(opt Options) error {
 	for _, path := range []string{opt.Dir, opt.ValueDir} {
 		dirExists, err := exists(path)
 		if err != nil {
-			return z.Wrapf(err, "Invalid Dir: %q", path)
+			return z.Wrapf(err, "invalid dir: %q", path)
 		}
+
 		if !dirExists {
 			if opt.ReadOnly {
-				return errors.Errorf("Cannot find directory %q for read-only open", path)
+				return errors.Errorf("cannot find directory %q for read-only open", path)
 			}
 			// Try to create the directory
-			err = os.Mkdir(path, 0700)
-			if err != nil {
-				return z.Wrapf(err, "Error Creating Dir: %q", path)
+			if err = os.Mkdir(path, 0700); err != nil {
+				return z.Wrapf(err, "error creating dir: %q", path)
 			}
 		}
 	}

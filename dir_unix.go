@@ -3,9 +3,13 @@
 package notbadger
 
 import (
+	"fmt"
 	"github.com/elliotcourant/notbadger/z"
 	"github.com/pkg/errors"
+	"golang.org/x/sys/unix"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 )
 
 type (
@@ -22,6 +26,75 @@ type (
 		readOnly bool
 	}
 )
+
+// acquireDirectoryLock gets a lock on the directory (using flock). If this is not read-only, it
+// will also write our pid to dirPath/pidFileName for convenience.
+func acquireDirectoryLock(
+	directoryPath string,
+	processIdFileName string,
+	readOnly bool,
+) (*directoryLockGuard, error) {
+	// Convert to absolute path so that Release still works even if we do an unbalanced chdir in the
+	// meantime.
+	absoluteProcessIdFilePath, err := filepath.Abs(filepath.Join(directoryPath, processIdFileName))
+	if err != nil {
+		return nil, errors.Wrap(err, "cannot get absolute path for process id lock file")
+	}
+
+	// Now that we have the path, try to open the directory.
+	dir, err := os.Open(directoryPath)
+	if err != nil {
+		return nil, errors.Wrapf(err, "cannot open directory: %q", directoryPath)
+	}
+
+	options := unix.LOCK_EX | unix.LOCK_NB
+	if readOnly {
+		options = unix.LOCK_SH | unix.LOCK_NB
+	}
+
+	if err = unix.Flock(int(dir.Fd()), options); err != nil {
+		_ = dir.Close()
+		return nil, errors.Wrapf(
+			err,
+			"cannot acquire directory lock on: %q another process is using this database",
+			directoryPath)
+	}
+
+	if !readOnly {
+		if err := ioutil.WriteFile(
+			absoluteProcessIdFilePath,
+			[]byte(fmt.Sprintf("%d\n", os.Getpid())),
+			0666,
+		); err != nil {
+			_ = dir.Close()
+			return nil, errors.Wrapf(err,
+				"cannot write process id file: %q", absoluteProcessIdFilePath)
+		}
+	}
+
+	return &directoryLockGuard{
+		file:     dir,
+		path:     absoluteProcessIdFilePath,
+		readOnly: readOnly,
+	}, nil
+}
+
+// Release deletes the pid file and releases our lock on the directory.
+func (guard *directoryLockGuard) release() (err error) {
+	if !guard.readOnly {
+		// It's important that we remove the pid file first.
+		err = os.Remove(guard.path)
+	}
+
+	if closeErr := guard.file.Close(); err == nil {
+		err = closeErr
+	}
+
+	guard.path = ""
+	guard.file = nil
+
+	return err
+}
 
 // openDir opens a directory for syncing.
 func openDir(path string) (*os.File, error) {

@@ -10,4 +10,5 @@ require (
 	github.com/rotisserie/eris v0.1.1
 	github.com/stretchr/testify v1.4.0
 	golang.org/x/net v0.0.0-20190620200207-3b0461eec859
+	golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a
 )

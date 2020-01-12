@@ -1,6 +1,7 @@
 package notbadger
 
 import (
+	"github.com/dgraph-io/ristretto"
 	"github.com/elliotcourant/notbadger/options"
 	"github.com/elliotcourant/notbadger/skiplist"
 	"github.com/elliotcourant/notbadger/z"
@@ -29,6 +30,9 @@ type (
 
 		writeChannel chan *request
 
+		manifest   *manifestFile
+		blockCache *ristretto.Cache
+
 		// closeOnce is used to make sure that the database can only be closed once.
 		closeOnce sync.Once
 	}
@@ -46,7 +50,7 @@ type (
 	}
 )
 
-func Open(opts Options) (*DB, error) {
+func Open(opts Options) (db *DB, err error) {
 	if opts.InMemory && (opts.Dir != "" || opts.ValueDir != "") {
 		return nil, errors.New("Cannot use badger in Disk-less mode with Dir or ValueDir set")
 	}
@@ -81,7 +85,7 @@ func Open(opts Options) (*DB, error) {
 		opts.CompactL0OnClose = false
 	}
 
-	// var dirLockGuard, valueDirLockGuard *directoryLockGuard
+	var dirLockGuard, valueDirLockGuard *directoryLockGuard
 
 	// Create directories and acquire lock on it only if badger is not running in InMemory mode.
 	// We don't have any directories/files in InMemory mode so we don't need to acquire
@@ -90,10 +94,58 @@ func Open(opts Options) (*DB, error) {
 		if err := createDirs(opts); err != nil {
 			return nil, err
 		}
-
+		dirLockGuard, err = acquireDirectoryLock(opts.Dir, lockFileName, opts.ReadOnly)
+		if err != nil {
+			return nil, err
+		}
+		defer func() {
+			if dirLockGuard != nil {
+				_ = dirLockGuard.release()
+			}
+		}()
 	}
 
-	return nil, nil
+	manifestFile, _, err := openOrCreateManifestFile(opts)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if manifestFile != nil {
+			_ = manifestFile.close()
+		}
+	}()
+
+	config := ristretto.Config{
+		// Use 5% of cache memory for storing counters.
+		NumCounters: int64(float64(opts.MaxCacheSize) * 0.05 * 2),
+		MaxCost:     int64(float64(opts.MaxCacheSize) * 0.95),
+		BufferItems: 64,
+		Metrics:     true,
+	}
+	cache, err := ristretto.NewCache(&config)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create cache")
+	}
+
+	db = &DB{
+		directoryLockGuard:      dirLockGuard,
+		valueDirectoryLockGuard: valueDirLockGuard,
+		partitions:              nil,
+		partitionsReadLock:      sync.RWMutex{},
+		partitionsWriteLock:     sync.Mutex{},
+		valueLog:                valueLog{},
+		valueHead:               valuePointer{},
+		writeChannel:            nil,
+		manifest:                manifestFile,
+		closeOnce:               sync.Once{},
+		blockCache:              cache,
+	}
+
+	valueDirLockGuard = nil
+	dirLockGuard = nil
+	manifestFile = nil
+
+	return db, nil
 }
 
 func exists(path string) (bool, error) {

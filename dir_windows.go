@@ -76,7 +76,7 @@ func acquireDirectoryLock(dirPath string, pidFileName string, readOnly bool) (*d
 		0)
 	if err != nil {
 		return nil, errors.Wrapf(err,
-			"Cannot create lock file %q.  Another process is using this Badger database",
+			"Cannot create lock file %q.  Another process is using this database",
 			absLockFilePath)
 	}
 

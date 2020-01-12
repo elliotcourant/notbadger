@@ -1,4 +1,4 @@
-# NotBadger
+# NotBadger ([BadgerDB](https://github.com/dgraph-io/badger))
 
 [![Build Status](https://travis-ci.com/elliotcourant/notbadger.svg?branch=master)](https://travis-ci.com/elliotcourant/notbadger)
 [![](https://godoc.org/github.com/elliotcourant/notbadger?status.svg)](http://godoc.org/github.com/elliotcourant/notbadger)

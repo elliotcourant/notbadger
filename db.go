@@ -1,13 +1,14 @@
 package notbadger
 
 import (
+	"os"
+	"sync"
+
 	"github.com/dgraph-io/ristretto"
 	"github.com/elliotcourant/notbadger/options"
 	"github.com/elliotcourant/notbadger/skiplist"
 	"github.com/elliotcourant/notbadger/z"
 	"github.com/pkg/errors"
-	"os"
-	"sync"
 )
 
 type (

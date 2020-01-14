@@ -61,7 +61,7 @@ type (
 	// TableManifest contains information about a specific table in the LSM tree.
 	TableManifest struct {
 		Level       uint8
-		KeyId       uint64
+		KeyID       uint64
 		Compression options.CompressionType
 	}
 
@@ -107,13 +107,13 @@ type (
 func (m *Manifest) asChanges() []pb.ManifestChange {
 	changes := make([]pb.ManifestChange, 0, m.TotalTables)
 
-	for partitionId, partition := range m.Partitions {
-		for tableId, tableManifest := range partition.Tables {
+	for partitionID, partition := range m.Partitions {
+		for tableID, tableManifest := range partition.Tables {
 			changes = append(changes, newCreateChange(
-				partitionId,
-				tableId,
+				partitionID,
+				tableID,
 				tableManifest.Level,
-				tableManifest.KeyId,
+				tableManifest.KeyID,
 				tableManifest.Compression,
 			))
 		}
@@ -244,7 +244,6 @@ func helpRewrite(dir string, m *Manifest) (*os.File, int, error) {
 	var lenCrcBuf [8]byte
 	binary.BigEndian.PutUint32(lenCrcBuf[0:4], uint32(len(changeBuf)))
 	binary.BigEndian.PutUint32(lenCrcBuf[4:8], xxhash.Checksum32(changeBuf))
-	binary.BigEndian.PutUint32(lenCrcBuf[4:8], xxhash.Checksum32(changeBuf))
 
 	buf = append(buf, lenCrcBuf[:]...)
 	buf = append(buf, changeBuf...)
@@ -328,7 +327,7 @@ func applyManifestChange(build *Manifest, change pb.ManifestChange) error {
 		// We know that the table does not exist yet so we can now actually create it.
 		partition.Tables[change.TableId] = TableManifest{
 			Level:       change.Level,
-			KeyId:       change.KeyId,
+			KeyID:       change.KeyID,
 			Compression: options.CompressionType(change.Compression),
 		}
 
@@ -573,7 +572,7 @@ func newCreateChange(
 		TableId:             tableId,
 		Operation:           pb.ManifestChangeCreate,
 		Level:               level,
-		KeyId:               keyId,
+		KeyID:               keyId,
 		EncryptionAlgorithm: pb.EncryptionAlgorithmAES,
 		Compression:         uint8(compression),
 	}

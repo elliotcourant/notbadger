@@ -12,7 +12,7 @@ const (
 		8 + // TableId (uint64 - 8 bytes)
 		1 + // Operation (uint8 - 1 byte)
 		1 + // Level (uint8 - 1 byte)
-		8 + // KeyId (uint64 - 8 bytes)
+		8 + // KeyID (uint64 - 8 bytes)
 		1 + // EncryptionAlgorithm (uint8 - 1 byte)
 		1 // Compression (uint32 - 4 bytes)
 )
@@ -34,7 +34,7 @@ type (
 
 		Level uint8
 
-		KeyId uint64
+		KeyID uint64
 
 		EncryptionAlgorithm EncryptionAlgorithm
 
@@ -84,7 +84,7 @@ func (mc *ManifestChange) MarshalEx(dst []byte) error {
 	dst[i] = mc.Level
 	i++
 
-	binary.BigEndian.PutUint64(dst[i:i+8], mc.KeyId)
+	binary.BigEndian.PutUint64(dst[i:i+8], mc.KeyID)
 	i += 8
 
 	dst[i] = uint8(mc.EncryptionAlgorithm)
@@ -127,7 +127,7 @@ func (mc *ManifestChange) Unmarshal(src []byte) error {
 	mc.Level = src[i]
 	i++
 
-	mc.KeyId = binary.BigEndian.Uint64(src[i : i+8])
+	mc.KeyID = binary.BigEndian.Uint64(src[i : i+8])
 	i += 8
 
 	mc.EncryptionAlgorithm = EncryptionAlgorithm(src[i])

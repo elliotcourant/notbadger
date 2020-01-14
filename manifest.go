@@ -177,8 +177,6 @@ func (mf *manifestFile) addChanges(manifestChanges []pb.ManifestChange) error {
 		binary.BigEndian.PutUint32(lenCrcBuf[4:8], xxhash.Checksum32(buf))
 		buf = append(lenCrcBuf[:], buf...)
 		if _, err := mf.file.Write(buf); err != nil {
-			// TODO (elliotcourant) If an error happens while closing the file maybe the write error should get wrapped so
-			//  that the close error is also included.
 			return err
 		}
 	}
@@ -205,21 +203,26 @@ func (mf *manifestFile) rewrite() error {
 	return nil
 }
 
+// close will simply close the manifest file. But will gracefully handle whether or not
+// the database is currently in memory.
 func (mf *manifestFile) close() error {
 	if mf.inMemory {
 		return nil
 	}
+
 	return mf.file.Close()
 }
 
-// TODO (elliotcourant) Add meaningful comment.
+// Read will read from the buffer into the provided byte slice. It will incement the count
+// for the number of bytes read.
 func (r *countingReader) Read(p []byte) (n int, err error) {
 	n, err = r.wrapped.Read(p)
 	r.count += int64(n)
+
 	return
 }
 
-// TODO (elliotcourant) Add meaningful comment.
+// ReadByte will read a single byte and increment the count by one.
 func (r *countingReader) ReadByte() (b byte, err error) {
 	b, err = r.wrapped.ReadByte()
 	if err == nil {
@@ -262,16 +265,12 @@ func helpRewrite(dir string, m *Manifest) (*os.File, int, error) {
 
 	// Write the data to the file.
 	if _, err := file.Write(buf); err != nil {
-		// TODO (elliotcourant) If an error happens while closing the file maybe the write error should get wrapped so
-		//  that the close error is also included.
 		_ = file.Close()
 		return nil, 0, err
 	}
 
 	// Sync the changes to the disk.
 	if err := z.FileSync(file); err != nil {
-		// TODO (elliotcourant) If an error happens while closing the file maybe the sync error should get wrapped so
-		//  that the close error is also included.
 		_ = file.Close()
 		return nil, 0, err
 	}
@@ -296,15 +295,11 @@ func helpRewrite(dir string, m *Manifest) (*os.File, int, error) {
 	}
 
 	if _, err := file.Seek(0, io.SeekEnd); err != nil {
-		// TODO (elliotcourant) If an error happens while closing the file maybe the seek error should get wrapped so
-		//  that the close error is also included.
 		_ = file.Close()
 		return nil, 0, err
 	}
 
 	if err := syncDir(dir); err != nil {
-		// TODO (elliotcourant) If an error happens while closing the file maybe the sync dir error should get wrapped
-		//  so that the close error is also included.
 		_ = file.Close()
 		return nil, 0, err
 	}

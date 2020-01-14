@@ -486,7 +486,10 @@ func helpOpenOrCreateManifestFile(directory string, readOnly bool, deletionsThre
 	}
 
 	file, err := z.OpenExistingFile(path, flags)
-	// TODO (elliotcourant) add meaningful comment.
+
+	// If we get an error then we need to check if the file does infact exist. Because if the file does
+	// exist then there is a larger problem here, like a permission issue. But if the file does not exist
+	// then we can take the steps necessary here to create it.
 	if err != nil {
 		if !os.IsNotExist(err) {
 			return nil, Manifest{}, errors.Wrap(err, "failed to open existing manifest file")

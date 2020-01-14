@@ -10,7 +10,6 @@ import (
 	"github.com/elliotcourant/notbadger/pb"
 	"github.com/elliotcourant/notbadger/z"
 	"github.com/pkg/errors"
-	"github.com/rotisserie/eris"
 	"io"
 	"os"
 	"path/filepath"
@@ -38,7 +37,20 @@ var (
 var (
 	// errBadMagic is returned when a manifest file is missing a 4 byte prefix that is used as a signature of the
 	// database.
-	errBadMagic = eris.New("manifest has bad magic")
+	errBadMagic = errors.New("manifest has bad magic")
+
+	// errBadManifestOperation is returned when a change in the manifest file doest not match up to the change
+	// operations that can currently be handled.
+	errBadManifestOperation = errors.New("MANIFEST file has an invalid manifestChange operation")
+
+	// ErrBadManifestVersion is returned when a manifest file has a version number that the current database cannot
+	// handle.
+	ErrBadManifestVersion = errors.New("MANIFEST has bad version")
+
+	// ErrBadManifestChecksum is returned when a manifest file has a checksum for a changeset that does not match
+	// the checksum of the actual data read from the manifest file. This is usually an indication that the manifest
+	// file is corrupted.
+	ErrBadManifestChecksum = errors.New("MANIFEST has bad chechsum")
 )
 
 type (
@@ -362,8 +374,7 @@ func applyManifestChange(build *Manifest, change pb.ManifestChange) error {
 		build.Deletions++
 		build.TotalTables--
 	default:
-		// TODO (elliotcourant) make this prebuilt error variable.
-		return fmt.Errorf("MANIFEST file has invalid manifestChange operation")
+		return errBadManifestOperation
 	}
 
 	return nil
@@ -376,22 +387,20 @@ func ReplayManifestFile(file *os.File) (Manifest, int64, error) {
 
 	var magicalBuf [8]byte
 	if _, err := io.ReadFull(&r, magicalBuf[:]); err != nil {
-		return Manifest{}, 0, eris.Wrapf(errBadMagic, "could not read: %v", err)
+		return Manifest{}, 0, errors.Wrapf(errBadMagic, "could not read: %v", err)
 	} else if !bytes.Equal(magicalBuf[0:4], magicalText[:]) {
-		return Manifest{}, 0, eris.Wrap(errBadMagic, "missing magic prefix")
+		return Manifest{}, 0, errors.Wrap(errBadMagic, "missing magic prefix")
 	}
 
 	version := binary.BigEndian.Uint32(magicalBuf[4:8])
 
 	if version != manifestVersion {
-		// TODO (elliotcourant) Add a real error here.
-		panic("bad version")
+		return Manifest{}, 0, ErrBadManifestVersion
 	}
 
 	stat, err := file.Stat()
 	if err != nil {
-		// TODO (elliotcourant) Wrap this error with a message about what we were trying to do.
-		return Manifest{}, 0, err
+		return Manifest{}, 0, errors.Wrap(err, "error while trying to read file stats")
 	}
 	fileSize := uint32(stat.Size())
 
@@ -409,15 +418,15 @@ func ReplayManifestFile(file *os.File) (Manifest, int64, error) {
 			}
 
 			// If it wasn't an EOF error though then there was an actual problem with the reader that we should return.
-			return Manifest{}, 0, eris.Wrap(err, "failed to replay manifest file")
+			return Manifest{}, 0, errors.Wrap(err, "failed to replay manifest file")
 		}
 
 		length := binary.BigEndian.Uint32(lenCrcBuf[0:4])
 
 		// Sanity check to make sure we don't over-allocate memory.
 		if length > fileSize {
-			return Manifest{}, 0, eris.Wrapf(
-				eris.New("buffer length for change set greater than file size, manifest might be corrupted"),
+			return Manifest{}, 0, errors.Wrapf(
+				errors.New("buffer length for change set greater than file size, manifest might be corrupted"),
 				"buffer length: %d file size: %d",
 				length,
 				fileSize,
@@ -425,7 +434,9 @@ func ReplayManifestFile(file *os.File) (Manifest, int64, error) {
 		}
 
 		buf := make([]byte, length)
-		// TODO (elliotcourant) add comments here.
+
+		// Since we know how many bytes will be read (by the size of the buf array) we can call ReadFull
+		// into that array to read the next change set into the byte array for unmarshalling.
 		if _, err := io.ReadFull(&r, buf); err != nil {
 			// If we hit either of these then we've reached the end of the file. There is either no more data to be read
 			// or the last entry was cut off and we cannot read it anyway.
@@ -434,22 +445,20 @@ func ReplayManifestFile(file *os.File) (Manifest, int64, error) {
 			}
 
 			// If it wasn't an EOF error though then there was an actual problem with the reader that we should return.
-			return Manifest{}, 0, eris.Wrap(err, "failed to replay manifest file")
+			return Manifest{}, 0, errors.Wrap(err, "failed to replay manifest file")
 		}
 
 		if xxhash.Checksum32(buf) != binary.BigEndian.Uint32(lenCrcBuf[4:8]) {
-			// TODO (elliotcourant) real error here.
-			panic("bad checksum")
+			return Manifest{}, 0, ErrBadManifestChecksum
 		}
 
 		var changeSet pb.ManifestChangeSet
 		if err := changeSet.Unmarshal(buf); err != nil {
-			// TODO (elliotcourant) real error here.
-			panic(err)
+			return Manifest{}, 0, errors.Wrap(err, "failed to unmarshal change set from buffer")
 		}
 
 		if err := applyChangeSet(&build, changeSet); err != nil {
-			return Manifest{}, 0, eris.Wrap(err, "failed to apply change set from manifest file")
+			return Manifest{}, 0, errors.Wrap(err, "failed to apply change set from manifest file")
 		}
 	}
 

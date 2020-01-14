@@ -495,6 +495,9 @@ func helpOpenOrCreateManifestFile(directory string, readOnly bool, deletionsThre
 			return nil, Manifest{}, errors.Wrap(err, "failed to open existing manifest file")
 		}
 
+		// If the file does not exist and we are opening a "ReadOnly" database then there is nothing we can
+		// do here. We can't create a new file to use without disregarding the ReadOnly requirement. So we
+		// return an error.
 		if readOnly {
 			return nil, Manifest{}, errors.New("no manifest found, required for read-only db")
 		}

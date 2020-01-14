@@ -19,8 +19,8 @@ import (
 type Options struct {
 	// Required options.
 
-	Dir      string
-	ValueDir string
+	Directory      string
+	ValueDirectory string
 
 	// Usually modified options.
 
@@ -89,8 +89,8 @@ func DefaultOptions(path string) Options {
 	// 	now in favor of uncompressed data.
 	defaultCompression := options.None
 	return Options{
-		Dir:                 path,
-		ValueDir:            path,
+		Directory:           path,
+		ValueDirectory:      path,
 		LevelOneSize:        256 << 20,
 		LevelSizeMultiplier: 10,
 		TableLoadingMode:    options.MemoryMap,
@@ -170,23 +170,23 @@ func LSMOnlyOptions(path string) Options {
 	return DefaultOptions(path).WithValueThreshold(maxValueThreshold /* 1 MB */)
 }
 
-// WithDir returns a new Options value with Dir set to the given value.
+// WithDir returns a new Options value with Directory set to the given value.
 //
-// Dir is the path of the directory where key data will be stored in.
+// Directory is the path of the directory where key data will be stored in.
 // If it doesn't exist, Badger will try to create it for you.
 // This is set automatically to be the path given to `DefaultOptions`.
 func (opt Options) WithDir(val string) Options {
-	opt.Dir = val
+	opt.Directory = val
 	return opt
 }
 
-// WithValueDir returns a new Options value with ValueDir set to the given value.
+// WithValueDir returns a new Options value with ValueDirectory set to the given value.
 //
-// ValueDir is the path of the directory where value data will be stored in.
+// ValueDirectory is the path of the directory where value data will be stored in.
 // If it doesn't exist, Badger will try to create it for you.
 // This is set automatically to be the path given to `DefaultOptions`.
 func (opt Options) WithValueDir(val string) Options {
-	opt.ValueDir = val
+	opt.ValueDirectory = val
 	return opt
 }
 

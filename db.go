@@ -2,6 +2,7 @@ package notbadger
 
 import (
 	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/dgraph-io/ristretto"
@@ -52,8 +53,8 @@ type (
 )
 
 func Open(opts Options) (db *DB, err error) {
-	if opts.InMemory && (opts.Dir != "" || opts.ValueDir != "") {
-		return nil, errors.New("Cannot use badger in Disk-less mode with Dir or ValueDir set")
+	if opts.InMemory && (opts.Directory != "" || opts.ValueDirectory != "") {
+		return nil, errors.New("Cannot use badger in Disk-less mode with Directory or ValueDirectory set")
 	}
 
 	opts.maxBatchSize = (15 * opts.MaxTableSize) / 100
@@ -75,8 +76,8 @@ func Open(opts Options) (db *DB, err error) {
 		return nil, ErrInvalidLoadingMode
 	}
 
-	// Compact L0 on close if either it is set or if KeepL0InMemory is set. When
-	// keepL0InMemory is set we need to compact L0 on close otherwise we might lose data.
+	// Compact L0 on close if either it is set or if KeepL0InMemory is set. When keepL0InMemory is set we need to
+	// compact L0 on close otherwise we might lose data.
 	opts.CompactL0OnClose = opts.CompactL0OnClose || opts.KeepL0InMemory
 
 	if opts.ReadOnly {
@@ -86,24 +87,55 @@ func Open(opts Options) (db *DB, err error) {
 		opts.CompactL0OnClose = false
 	}
 
-	var dirLockGuard, valueDirLockGuard *directoryLockGuard
+	var directoryLockGuard, valueDirectoryLockGuard *directoryLockGuard
 
-	// Create directories and acquire lock on it only if badger is not running in InMemory mode.
-	// We don't have any directories/files in InMemory mode so we don't need to acquire
-	// any locks on them.
+	// Create directories and acquire lock on it only if badger is not running in InMemory mode. We don't have any
+	// directories/files in InMemory mode so we don't need to acquire any locks on them.
 	if !opts.InMemory {
 		if err := createDirs(opts); err != nil {
 			return nil, err
 		}
-		dirLockGuard, err = acquireDirectoryLock(opts.Dir, lockFileName, opts.ReadOnly)
+		directoryLockGuard, err = acquireDirectoryLock(opts.Directory, lockFileName, opts.ReadOnly)
 		if err != nil {
 			return nil, err
 		}
+
+		// Make sure to cleanup at the end if there is a problem.
 		defer func() {
-			if dirLockGuard != nil {
-				_ = dirLockGuard.release()
+			// At the end of the open function we throw out the local variables if there is a problem. This is done by
+			// checking to see if a variable is nil at the end. If it is then we need to dispose of it gracefully.
+			if directoryLockGuard != nil {
+				_ = directoryLockGuard.release()
 			}
 		}()
+
+		absoluteDirectoryPath, err := filepath.Abs(opts.Directory)
+		if err != nil {
+			return nil, err
+		}
+
+		absoluteValueDirectoryPath, err := filepath.Abs(opts.ValueDirectory)
+		if err != nil {
+			return nil, err
+		}
+
+		// If the value directory path is not the same as the normal directory path then we need to acquire a directory
+		// lock on the value directory as well. We want to do this comparison with the absolute paths to make sure that
+		// the paths are actually the same. It's possible to provide a path to the same directory as different strings
+		// but by resolving the absolute directory we know the actual path and can compare them.
+		if absoluteValueDirectoryPath != absoluteDirectoryPath {
+			valueDirectoryLockGuard, err = acquireDirectoryLock(opts.ValueDirectory, lockFileName, opts.ReadOnly)
+			if err != nil {
+				return nil, err
+			}
+
+			// Make sure that if something fails later on we still clean up this directory lock.
+			defer func() {
+				if valueDirectoryLockGuard != nil {
+					_ = valueDirectoryLockGuard.release()
+				}
+			}()
+		}
 	}
 
 	manifestFile, _, err := openOrCreateManifestFile(opts)
@@ -129,8 +161,8 @@ func Open(opts Options) (db *DB, err error) {
 	}
 
 	db = &DB{
-		directoryLockGuard:      dirLockGuard,
-		valueDirectoryLockGuard: valueDirLockGuard,
+		directoryLockGuard:      directoryLockGuard,
+		valueDirectoryLockGuard: valueDirectoryLockGuard,
 		partitions:              nil,
 		partitionsReadLock:      sync.RWMutex{},
 		partitionsWriteLock:     sync.Mutex{},
@@ -142,8 +174,8 @@ func Open(opts Options) (db *DB, err error) {
 		blockCache:              cache,
 	}
 
-	valueDirLockGuard = nil
-	dirLockGuard = nil
+	valueDirectoryLockGuard = nil
+	directoryLockGuard = nil
 	manifestFile = nil
 
 	return db, nil
@@ -160,7 +192,7 @@ func exists(path string) (bool, error) {
 }
 
 func createDirs(opt Options) error {
-	for _, path := range []string{opt.Dir, opt.ValueDir} {
+	for _, path := range []string{opt.Directory, opt.ValueDirectory} {
 		dirExists, err := exists(path)
 		if err != nil {
 			return z.Wrapf(err, "invalid dir: %q", path)

@@ -466,7 +466,7 @@ func openOrCreateManifestFile(options Options) (*manifestFile, Manifest, error) 
 		return &manifestFile{inMemory: true}, Manifest{}, nil
 	}
 
-	return helpOpenOrCreateManifestFile(options.Dir, options.ReadOnly, manifestDeletionsRewriteThreshold)
+	return helpOpenOrCreateManifestFile(options.Directory, options.ReadOnly, manifestDeletionsRewriteThreshold)
 }
 
 func helpOpenOrCreateManifestFile(directory string, readOnly bool, deletionsThreshold int) (

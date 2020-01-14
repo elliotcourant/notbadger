@@ -479,7 +479,6 @@ func helpOpenOrCreateManifestFile(directory string, readOnly bool, deletionsThre
 	if readOnly {
 		flags |= z.ReadOnly
 	}
-
 	file, err := z.OpenExistingFile(path, flags)
 
 	// If we get an error then we need to check if the file does infact exist. Because if the file does

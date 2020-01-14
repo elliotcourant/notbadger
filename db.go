@@ -138,6 +138,7 @@ func Open(opts Options) (db *DB, err error) {
 		}
 	}
 
+	// Open/create the manifest file. This will give us the initial state of our entire database.
 	manifestFile, _, err := openOrCreateManifestFile(opts)
 	if err != nil {
 		return nil, err

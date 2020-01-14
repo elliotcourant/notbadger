@@ -3,6 +3,7 @@
 [![Build Status](https://travis-ci.com/elliotcourant/notbadger.svg?branch=master)](https://travis-ci.com/elliotcourant/notbadger)
 [![](https://godoc.org/github.com/elliotcourant/notbadger?status.svg)](http://godoc.org/github.com/elliotcourant/notbadger)
 
+[Documentation](/docs)
 
 NotBadger is a project to fork BadgerDB. The primary goal of NotBadger is to create a database that
 supports multiple LSM Trees as a single database. The trees would be stored separately on the disk
@@ -24,3 +25,4 @@ NotBadger and BadgerDB.
 | Encoding     | Manual             | Protobuf               |
 | Partitioning | Multiple LSM Trees | None (Single LSM Tree) |
 | Checksum     | xxhash             | CRC32                  |
+

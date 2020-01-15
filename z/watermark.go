@@ -24,3 +24,14 @@ type (
 		done bool
 	}
 )
+
+func (w *WaterMark) Init(closer *Closer, eventLogging bool) {
+	w.markChannel = make(chan mark, 100)
+	if eventLogging {
+		w.eventLog = trace.NewEventLog("WaterMark", w.Name)
+	} else {
+		w.eventLog = NoEventLog
+	}
+	// TODO (elliotcourant) Need to add watermark process.
+	return
+}

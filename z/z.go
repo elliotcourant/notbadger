@@ -37,6 +37,13 @@ type (
 	}
 )
 
+// NewCloser constructs a new Closer, with an initial count on the WaitGroup.
+func NewCloser(initial int) *Closer {
+	ret := &Closer{closed: make(chan struct{})}
+	ret.waiting.Add(initial)
+	return ret
+}
+
 // OpenExistingFile opens an existing file, errors if it doesn't exist.
 func OpenExistingFile(fileName string, flags uint32) (*os.File, error) {
 	openFlags := os.O_RDWR

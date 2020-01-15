@@ -570,30 +570,30 @@ func createManifest() Manifest {
 }
 
 func newCreateChange(
-	partitionId PartitionId,
-	tableId uint64,
+	partitonID PartitionId,
+	tableID uint64,
 	level uint8,
-	keyId uint64,
+	keyID uint64,
 	compression options.CompressionType,
 ) pb.ManifestChange {
 	return pb.ManifestChange{
-		PartitionId:         uint32(partitionId),
-		TableId:             tableId,
+		PartitionId:         uint32(partitonID),
+		TableId:             tableID,
 		Operation:           pb.ManifestChangeCreate,
 		Level:               level,
-		KeyID:               keyId,
+		KeyID:               keyID,
 		EncryptionAlgorithm: pb.EncryptionAlgorithmAES,
 		Compression:         uint8(compression),
 	}
 }
 
 func newDeleteChange(
-	partitionId PartitionId,
-	tableId uint64,
+	partitonID PartitionId,
+	tableID uint64,
 ) pb.ManifestChange {
 	return pb.ManifestChange{
-		PartitionId: uint32(partitionId),
-		TableId:     tableId,
+		PartitionId: uint32(partitonID),
+		TableId:     tableID,
 		Operation:   pb.ManifestChangeDelete,
 	}
 }

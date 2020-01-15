@@ -10,10 +10,14 @@ import (
 	"github.com/elliotcourant/notbadger/skiplist"
 	"github.com/elliotcourant/notbadger/z"
 	"github.com/pkg/errors"
+	"golang.org/x/net/trace"
 )
 
 type (
 	DB struct {
+		// eventLog is for debugging and doing traces within NotBadger.
+		eventLog trace.EventLog
+
 		// TODO (elliotcourant) add meaningful comment.
 		directoryLockGuard *directoryLockGuard
 
@@ -143,11 +147,19 @@ func Open(opts Options) (db *DB, err error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// If we have a problem in the Open method then we will need to cleanup the manifestFile at
+	// the end.
 	defer func() {
 		if manifestFile != nil {
 			_ = manifestFile.close()
 		}
 	}()
+
+	eventLog := z.NoEventLog
+	if opts.EventLogging {
+		eventLog = trace.NewEventLog("NotBadger", "DB")
+	}
 
 	config := ristretto.Config{
 		// Use 5% of cache memory for storing counters.
@@ -162,17 +174,18 @@ func Open(opts Options) (db *DB, err error) {
 	}
 
 	db = &DB{
+		blockCache:              cache,
+		closeOnce:               sync.Once{},
 		directoryLockGuard:      directoryLockGuard,
-		valueDirectoryLockGuard: valueDirectoryLockGuard,
-		partitions:              nil,
+		eventLog:                eventLog,
+		manifest:                manifestFile,
+		partitions:              make(map[PartitionId]*partitionMemoryTables),
 		partitionsReadLock:      sync.RWMutex{},
 		partitionsWriteLock:     sync.Mutex{},
-		valueLog:                valueLog{},
+		valueDirectoryLockGuard: valueDirectoryLockGuard,
 		valueHead:               valuePointer{},
+		valueLog:                valueLog{},
 		writeChannel:            nil,
-		manifest:                manifestFile,
-		closeOnce:               sync.Once{},
-		blockCache:              cache,
 	}
 
 	valueDirectoryLockGuard = nil

@@ -1,6 +1,10 @@
 package notbadger
 
-import "sync"
+import (
+	"sync"
+
+	"github.com/elliotcourant/notbadger/z"
+)
 
 type (
 	oracle struct {
@@ -21,5 +25,18 @@ type (
 
 		// TODO (elliotcourant) add meaningful comment.
 		nextTransactionTimestamp uint64
+
+		// Used to block NewTransaction, so all previous commits are visible to a
+		// new read.
+		transactionMark *z.WaterMark
+
+		// Either of these is used to determine which version can be permanently discarded
+		// during compaction.
+		discardTimestamp uint64       // Used by ManagedDB.
+		readMark         *z.WaterMark // Used by DB.
+
+		// commits stores a key fingerprint and latest commit counter for it.
+		// refCount is used to clear out the commits map to avoid a memory blowup.
+		commits map[uint64]uint64
 	}
 )

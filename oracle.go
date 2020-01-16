@@ -63,3 +63,11 @@ func newOracle(opts Options) *oracle {
 
 	return orc
 }
+
+func (o *oracle) nextTimestamp() uint64 {
+	o.Lock()
+	defer o.Unlock()
+
+	// TODO (elliotcourant) Maybe change this to atomic.LoadUint64() ?
+	return o.nextTransactionTimestamp
+}

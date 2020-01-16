@@ -13,6 +13,14 @@ import (
 	"golang.org/x/net/trace"
 )
 
+var (
+	notBadgerPrefix   = []byte("!notbgr!")        // Prefix for internal keys used by badger.
+	head              = []byte("!notbgr!head")    // For storing value offset for replay.
+	transactionKey    = []byte("!notbgr!txn")     // For indicating end of entries in txn.
+	notBadgerMove     = []byte("!notbgr!move")    // For key-value pairs which got moved during GC.
+	lfDiscardStatsKey = []byte("!notbgr!discard") // For storing lfDiscardStats
+)
+
 type (
 	DB struct {
 		// eventLog is for debugging and doing traces within NotBadger.
@@ -39,10 +47,17 @@ type (
 		manifest   *manifestFile
 		blockCache *ristretto.Cache
 
+		// options represents the initial configuration that the database was opened with. This is
+		// referenced throughout the lifetime of the database.
+		options Options
+
+		oracle *oracle
+
 		// closeOnce is used to make sure that the database can only be closed once.
 		closeOnce sync.Once
 	}
 
+	// TODO (elliotcourant) Add meaningful comment.
 	partitionMemoryTables struct {
 		// Guards against changes to this partition's in memory tables. Not individual reads and writes.
 		sync.RWMutex
@@ -53,6 +68,13 @@ type (
 
 		// flushed is equivalent to badger's DB.imm. Add here only AFTER pushing to the flush channel.
 		flushed []*skiplist.SkipList
+	}
+
+	// TODO (elliotcourant) Add meaningful comment.
+	flushTask struct {
+		memoryTable  *skiplist.SkipList
+		valuePointer valuePointer
+		dropPrefix   []byte
 	}
 )
 
@@ -182,6 +204,8 @@ func Open(opts Options) (db *DB, err error) {
 		partitions:              make(map[PartitionId]*partitionMemoryTables),
 		partitionsReadLock:      sync.RWMutex{},
 		partitionsWriteLock:     sync.Mutex{},
+		options:                 opts,
+		oracle:                  newOracle(opts),
 		valueDirectoryLockGuard: valueDirectoryLockGuard,
 		valueHead:               valuePointer{},
 		valueLog:                valueLog{},
@@ -193,6 +217,23 @@ func Open(opts Options) (db *DB, err error) {
 	manifestFile = nil
 
 	return db, nil
+}
+
+// handleFlushTask must be run serially.
+func (db *DB) handleFlushTask(task flushTask) error {
+	// There can be a scenario, when an empty memory table is flushed. For example, when the memory
+	// table is empty and after writing the request to the value log, the rotation count exceeds
+	// db.LogRotatesToFlush.
+	if task.memoryTable.Empty() {
+		return nil
+	}
+
+	// TODO (elliotcourant) Add Option logging.
+	db.eventLog.Printf("storing offset: %+v\n", task.valuePointer)
+
+	_ = task.valuePointer.Encode()
+
+	return nil
 }
 
 func exists(path string) (bool, error) {

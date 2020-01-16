@@ -35,3 +35,13 @@ func (e *Entry) estimateSize(threshold int) int {
 
 	return len(e.Key) + 12 + 2 // 12 for ValuePointer, 2 for metas.
 }
+
+// Encode encodes Pointer into byte buffer.
+func (v valuePointer) Encode() []byte {
+	b := make([]byte, valuePointerSize)
+
+	// Copy over the content from p to b.
+	*(*valuePointer)(unsafe.Pointer(&b[0])) = v
+
+	return b
+}

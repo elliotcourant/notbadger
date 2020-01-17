@@ -1,12 +1,17 @@
 package notbadger
 
 import (
+	"bytes"
 	"github.com/elliotcourant/notbadger/pb"
 	"github.com/elliotcourant/notbadger/z"
 	"os"
 	"path/filepath"
 	"sync"
 	"time"
+)
+
+var (
+	sanityText = []byte("not badger")
 )
 
 type (
@@ -71,10 +76,41 @@ func OpenKeyRegistry(opts KeyRegistryOptions) (*KeyRegistry, error) {
 
 	// If the file does not exist then we need to create it.
 	if os.IsNotExist(err) {
+		// If the file doesnt exist and we are in read only mode then don't actually write anything
+		// to the disk. Just create the registry in memory.
+		registry := newKeyRegistry(opts)
+		if opts.ReadOnly {
+			return registry, nil
+		}
 
+		// If its not read only though then we can use this fresh registry to write a clean file to
+		// the disk.
 	}
 
 	return nil, nil
+}
+
+func WriteKeyRegistry(registry *KeyRegistry, opts KeyRegistryOptions) error {
+	buf := &bytes.Buffer{}
+	iv, err := z.GenerateIV()
+	z.Check(err)
+
+	// Encrypt the sanity text if the encryption key is present.
+	eSanity := sanityText
+	if len(opts.EncryptionKey) > 0 {
+		var err error
+		eSanity, err = z.XORBlock(eSanity, opts.EncryptionKey, iv)
+		if err != nil {
+			return z.Wrapf(err, "error while encrypting sanity text in WriteKeyRegistry")
+		}
+	}
+
+	// Write the IV and the sanity text to the buffer. If there was an encryption key then
+	// eSanity will have been encrypted, but without it it will be the plain text.
+	z.Check2(buf.Write(iv))
+	z.Check2(buf.Write(eSanity))
+
+	return nil
 }
 
 // latestDataKey will give you the latest generated dataKey based on the rotation period. If the

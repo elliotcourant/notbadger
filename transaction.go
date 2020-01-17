@@ -5,11 +5,11 @@ type (
 		readTimestamp   uint64
 		commitTimestamp uint64
 
-		update bool     // update is used to conditionally keep track of reads.
-		reads  []uint64 // contains fingerprints of keys read.
-		writes []uint64 // contains fingerprints of keys written.
+		update bool                     // update is used to conditionally keep track of reads.
+		reads  map[PartitionId][]uint64 // contains fingerprints of keys read.
+		writes map[PartitionId][]uint64 // contains fingerprints of keys written.
 
-		pendingWrites map[string]*Entry
+		pendingWrites map[PartitionId]map[string]*Entry
 
 		db        *DB
 		discarded bool

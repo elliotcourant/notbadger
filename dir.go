@@ -1,5 +1,6 @@
 package notbadger
 
 const (
-	lockFileName = "LOCK"
+	lockFileName        = "LOCK"
+	keyRegistryFileName = "KEYREGISTRY"
 )

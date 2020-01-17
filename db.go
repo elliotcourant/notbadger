@@ -53,6 +53,8 @@ type (
 
 		oracle *oracle
 
+		registry *KeyRegistry
+
 		// closeOnce is used to make sure that the database can only be closed once.
 		closeOnce sync.Once
 	}
@@ -212,6 +214,23 @@ func Open(opts Options) (db *DB, err error) {
 		writeChannel:            nil,
 	}
 
+	if db.options.InMemory {
+		db.options.SyncWrites = false
+		db.options.ValueThreshold = maxValueThreshold
+	}
+
+	keyRegistryOptions := KeyRegistryOptions{
+		Directory:                     opts.Directory,
+		ReadOnly:                      opts.ReadOnly,
+		EncryptionKey:                 opts.EncryptionKey,
+		EncryptionKeyRotationDuration: opts.EncryptionKeyRotationDuration,
+		InMemory:                      opts.InMemory,
+	}
+
+	if db.registry, err = OpenKeyRegistry(keyRegistryOptions); err != nil {
+
+	}
+
 	valueDirectoryLockGuard = nil
 	directoryLockGuard = nil
 	manifestFile = nil
@@ -230,8 +249,16 @@ func (db *DB) handleFlushTask(task flushTask) error {
 
 	// TODO (elliotcourant) Add Option logging.
 	db.eventLog.Printf("storing offset: %+v\n", task.valuePointer)
+	value := task.valuePointer.Encode()
 
-	_ = task.valuePointer.Encode()
+	// Pick the max commit ts, so in case of crash, our read ts would be higher than all the commits
+	headTimestamp := z.KeyWithTs(head, db.oracle.nextTimestamp())
+
+	task.memoryTable.Put(headTimestamp, z.ValueStruct{
+		Value: value,
+	})
+
+	// dataKey, err := db.
 
 	return nil
 }

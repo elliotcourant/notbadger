@@ -2,6 +2,8 @@ package notbadger
 
 import (
 	"bytes"
+	"encoding/binary"
+	"github.com/OneOfOne/xxhash"
 	"github.com/elliotcourant/notbadger/pb"
 	"github.com/elliotcourant/notbadger/z"
 	"os"
@@ -110,7 +112,70 @@ func WriteKeyRegistry(registry *KeyRegistry, opts KeyRegistryOptions) error {
 	z.Check2(buf.Write(iv))
 	z.Check2(buf.Write(eSanity))
 
+	// Write all the dataKeys to the buffer.
+	for _, keys := range registry.dataKeys {
+		for _, key := range keys {
+			// Writing the dataKey to the given buffer.
+			if err := storeDataKey(
+				buf,
+				registry.options.EncryptionKey,
+				key,
+			); err != nil {
+				return err
+			}
+		}
+
+	}
+
 	return nil
+}
+
+// storeDataKey stores the provided dataKey in an encrypted format in the given buffer. If an
+// encryption key is provided.
+func storeDataKey(
+	buffer *bytes.Buffer,
+	encryptionKey []byte,
+	key *pb.DataKey,
+) error {
+	var data []byte
+	var err error
+
+	data, err = key.Marshall(encryptionKey)
+	if err != nil {
+		return nil
+	}
+
+	var lenSumBuf [8]byte
+	binary.BigEndian.PutUint32(lenSumBuf[0:4], uint32(len(data)))
+	binary.BigEndian.PutUint32(lenSumBuf[4:8], xxhash.Checksum32(data))
+	z.Check2(buffer.Write(lenSumBuf[:]))
+	z.Check2(buffer.Write(data))
+
+	return nil
+}
+
+func (k *KeyRegistry) dataKey(partitionId PartitionId, keyId uint64) (*pb.DataKey, error) {
+	k.RLock()
+	defer k.RUnlock()
+	if keyId == 0 {
+		// nil represents plain text.
+		// TODO (elliotcourant) more comments.
+		return nil, nil
+	}
+
+	partition, ok := k.dataKeys[partitionId]
+	if !ok {
+		// TODO (elliotcourant) add a real error.
+		panic("invalid partition id")
+	}
+
+	dataKey, ok := partition[keyId]
+	if !ok {
+		// TODO (elliotcourant) add a real error.
+		panic("invalid key id")
+	}
+
+	return dataKey, nil
 }
 
 // latestDataKey will give you the latest generated dataKey based on the rotation period. If the

@@ -172,10 +172,10 @@ func (mf *manifestFile) addChanges(manifestChanges []pb.ManifestChange) error {
 		}
 	} else {
 		// TODO (elliotcourant) Maybe the lenCrc buf could be broken into its own method?
-		var lenCrcBuf [8]byte
-		binary.BigEndian.PutUint32(lenCrcBuf[0:4], uint32(len(buf)))
-		binary.BigEndian.PutUint32(lenCrcBuf[4:8], xxhash.Checksum32(buf))
-		buf = append(lenCrcBuf[:], buf...)
+		var lenSumBuf [8]byte
+		binary.BigEndian.PutUint32(lenSumBuf[0:4], uint32(len(buf)))
+		binary.BigEndian.PutUint32(lenSumBuf[4:8], xxhash.Checksum32(buf))
+		buf = append(lenSumBuf[:], buf...)
 		if _, err := mf.file.Write(buf); err != nil {
 			return err
 		}

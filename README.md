@@ -18,9 +18,10 @@ NotBadger and BadgerDB.
 
 ### Differences between NotBadger and BadgerDB
 
-|              | NotBadger          | BadgerDB               |
-|--------------|--------------------|------------------------|
-| Encoding     | Manual             | Protobuf               |
-| Partitioning | Multiple LSM Trees | None (Single LSM Tree) |
-| Checksum     | xxhash             | CRC32                  |
+|              | NotBadger             | BadgerDB               |
+|--------------|-----------------------|------------------------|
+| Encoding     | Manual                | Protobuf               |
+| Partitioning | Multiple LSM Trees    | None (Single LSM Tree) |
+| Checksum     | xxhash                | CRC32                  |
+| Metrics      | Atomic Local Variable | expvar                 |
 

@@ -1,9 +1,11 @@
 package notbadger
 
 import (
+	"github.com/elliotcourant/timber"
 	"os"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 
 	"github.com/dgraph-io/ristretto"
 	"github.com/elliotcourant/notbadger/options"
@@ -51,9 +53,9 @@ type (
 		// referenced throughout the lifetime of the database.
 		options Options
 
-		oracle *oracle
-
+		oracle   *oracle
 		registry *KeyRegistry
+		size     *databaseSize
 
 		// closeOnce is used to make sure that the database can only be closed once.
 		closeOnce sync.Once
@@ -77,6 +79,9 @@ type (
 		memoryTable  *skiplist.SkipList
 		valuePointer valuePointer
 		dropPrefix   []byte
+	}
+
+	closers struct {
 	}
 )
 
@@ -208,6 +213,7 @@ func Open(opts Options) (db *DB, err error) {
 		partitionsWriteLock:     sync.Mutex{},
 		options:                 opts,
 		oracle:                  newOracle(opts),
+		size:                    &databaseSize{},
 		valueDirectoryLockGuard: valueDirectoryLockGuard,
 		valueHead:               valuePointer{},
 		valueLog:                valueLog{},
@@ -228,7 +234,16 @@ func Open(opts Options) (db *DB, err error) {
 	}
 
 	if db.registry, err = OpenKeyRegistry(keyRegistryOptions); err != nil {
+		return nil, err
+	}
 
+	// Calculate the size of the database on the disk.
+	db.calculateSize()
+
+	// 0 is the default partition.
+	db.partitions[0] = &partitionMemoryTables{
+		active:  skiplist.NewSkiplist(arenaSize(db.options)),
+		flushed: make([]*skiplist.SkipList, db.options.NumMemoryTables),
 	}
 
 	valueDirectoryLockGuard = nil
@@ -261,6 +276,59 @@ func (db *DB) handleFlushTask(task flushTask) error {
 	// dataKey, err := db.
 
 	return nil
+}
+
+// calculateSize does a file walk, calculates the size of the value log and stores it in the
+// z.LSMSize and z.ValueLogSize
+func (db *DB) calculateSize() {
+	if db.options.InMemory {
+		return
+	}
+
+	totalSize := func(dir string) (lsmSize, valueLogSize int64) {
+		if err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+
+			fileExtension := filepath.Ext(path)
+
+			switch fileExtension {
+			case tableFileExtension:
+				lsmSize += info.Size()
+			case valueLogFileExtension:
+				valueLogSize += info.Size()
+			default:
+				timber.Warningf(
+					"unknown file extension '%s' for file %s/%s",
+					fileExtension,
+					dir,
+					info.Name(),
+				)
+			}
+
+			return nil
+		}); err != nil {
+			db.eventLog.Printf("error while calculating total size of directory: %s", dir)
+		}
+
+		return
+	}
+
+	lsmSize, valueLogSize := totalSize(db.options.Directory)
+
+	// If valueDir is different from dir, we'd have to do another walk.
+	if db.options.ValueDirectory != db.options.Directory {
+		_, valueLogSize = totalSize(db.options.ValueDirectory)
+	}
+
+	atomic.StoreInt64(&db.size.LSMSize, lsmSize)
+	atomic.StoreInt64(&db.size.ValueLogSize, valueLogSize)
+}
+
+func arenaSize(options Options) int64 {
+	return options.MaxTableSize + options.maxBatchSize + options.maxBatchCount*
+		int64(skiplist.MaxNodeSize)
 }
 
 func exists(path string) (bool, error) {

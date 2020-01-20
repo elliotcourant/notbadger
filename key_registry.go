@@ -154,6 +154,15 @@ func storeDataKey(
 	return nil
 }
 
+// Close closes the key registry and the file.
+func (k *KeyRegistry) Close() error {
+	if !(k.options.ReadOnly || k.options.InMemory) {
+		return k.file.Close()
+	}
+
+	return nil
+}
+
 func (k *KeyRegistry) dataKey(partitionId PartitionId, keyId uint64) (*pb.DataKey, error) {
 	k.RLock()
 	defer k.RUnlock()

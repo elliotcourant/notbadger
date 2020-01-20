@@ -26,6 +26,9 @@ const (
 var (
 	// CastagnoliCrcTable is a CRC32 polynomial table. This is used for creating checksums for files.
 	CastagnoliCrcTable = crc32.MakeTable(crc32.Castagnoli)
+
+	// Dummy channel for nil closers.
+	dummyCloserChan = make(chan struct{})
 )
 
 type (
@@ -42,6 +45,44 @@ func NewCloser(initial int) *Closer {
 	ret := &Closer{closed: make(chan struct{})}
 	ret.waiting.Add(initial)
 	return ret
+}
+
+// AddRunning Add()'s delta to the WaitGroup.
+func (lc *Closer) AddRunning(delta int) {
+	lc.waiting.Add(delta)
+}
+
+// Signal signals the HasBeenClosed signal.
+func (lc *Closer) Signal() {
+	close(lc.closed)
+}
+
+// HasBeenClosed gets signaled when Signal() is called.
+func (lc *Closer) HasBeenClosed() <-chan struct{} {
+	if lc == nil {
+		return dummyCloserChan
+	}
+	return lc.closed
+}
+
+// Done calls Done() on the WaitGroup.
+func (lc *Closer) Done() {
+	if lc == nil {
+		return
+	}
+	lc.waiting.Done()
+}
+
+// Wait waits on the WaitGroup.  (It waits for NewCloser's initial value, AddRunning, and Done
+// calls to balance out.)
+func (lc *Closer) Wait() {
+	lc.waiting.Wait()
+}
+
+// SignalAndWait calls Signal(), then Wait().
+func (lc *Closer) SignalAndWait() {
+	lc.Signal()
+	lc.Wait()
 }
 
 // OpenExistingFile opens an existing file, errors if it doesn't exist.

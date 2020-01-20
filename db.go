@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/dgraph-io/ristretto"
 	"github.com/elliotcourant/notbadger/options"
@@ -56,6 +57,7 @@ type (
 		oracle   *oracle
 		registry *KeyRegistry
 		size     *databaseSize
+		closers  closers
 
 		// closeOnce is used to make sure that the database can only be closed once.
 		closeOnce sync.Once
@@ -82,6 +84,12 @@ type (
 	}
 
 	closers struct {
+		updateSize            *z.Closer
+		compactors            *z.Closer
+		memoryTable           *z.Closer // TODO this might need to be split for partitions
+		writes                *z.Closer
+		valueGarbageCollector *z.Closer
+		publish               *z.Closer
 	}
 )
 
@@ -239,6 +247,9 @@ func Open(opts Options) (db *DB, err error) {
 
 	// Calculate the size of the database on the disk.
 	db.calculateSize()
+	db.closers.updateSize = z.NewCloser(1)
+	// updateSize will update the database size variables once every minute
+	go db.updateSize(db.closers.updateSize)
 
 	// 0 is the default partition.
 	db.partitions[0] = &partitionMemoryTables{
@@ -276,6 +287,25 @@ func (db *DB) handleFlushTask(task flushTask) error {
 	// dataKey, err := db.
 
 	return nil
+}
+
+func (db *DB) updateSize(lc *z.Closer) {
+	defer lc.Done()
+	if db.options.InMemory {
+		return
+	}
+
+	metricsTicker := time.NewTicker(time.Minute)
+	defer metricsTicker.Stop()
+
+	for {
+		select {
+		case <-metricsTicker.C:
+			db.calculateSize()
+		case <-lc.HasBeenClosed():
+			return
+		}
+	}
 }
 
 // calculateSize does a file walk, calculates the size of the value log and stores it in the

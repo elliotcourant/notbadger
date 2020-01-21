@@ -65,6 +65,8 @@ func OpenTable(file *os.File, options Options) (*Table, error) {
 		return nil, z.Wrap(err)
 	}
 
+	// fileName := fileInfo.Name()
+
 	return nil, nil
 }
 

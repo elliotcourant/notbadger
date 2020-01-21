@@ -2,7 +2,12 @@
 
 package z
 
-import "os"
+import (
+	"fmt"
+	"os"
+	"syscall"
+	"unsafe"
+)
 
 func mmap(file *os.File, write bool, size int64) ([]byte, error) {
 	protect := syscall.PAGE_READONLY

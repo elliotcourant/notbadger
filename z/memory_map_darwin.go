@@ -1,6 +1,11 @@
 package z
 
-import "os"
+import (
+	"golang.org/x/sys/unix"
+	"os"
+	"syscall"
+	"unsafe"
+)
 
 // Mmap uses the mmap system call to memory-map a file. If writable is true, memory protection of the pages is set so
 // that they may be written to as well.

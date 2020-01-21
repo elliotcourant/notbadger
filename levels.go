@@ -34,5 +34,5 @@ type (
 )
 
 func newLevelsController(db *DB, manifest *Manifest) (*levelsController, error) {
-
+	return nil, nil
 }

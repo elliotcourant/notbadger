@@ -1,10 +1,13 @@
 package table
 
 import (
+	"fmt"
 	b "github.com/dgraph-io/ristretto/z"
 	"github.com/elliotcourant/notbadger/options"
 	"github.com/elliotcourant/notbadger/pb"
 	"github.com/elliotcourant/notbadger/z"
+	"github.com/pkg/errors"
+	"io"
 	"os"
 	"sync"
 	"sync/atomic"
@@ -36,7 +39,7 @@ type (
 		// The following are initialized once and are constant.
 		smallest, largest []byte // Smallest and largest keys (with timestamps). TODO Head, tail?
 		partitionId       uint32
-		id                uint64
+		fileId            uint64
 		bloomFilter       *b.Bloom
 		Checksum          []byte // TODO Maybe xxhash this?
 
@@ -56,8 +59,8 @@ type (
 	}
 )
 
-func OpenTable(file *os.File, options Options) (*Table, error) {
-	_, err := file.Stat()
+func OpenTable(file *os.File, opts Options) (*Table, error) {
+	fileInfo, err := file.Stat()
 	if err != nil {
 		// It's OK to ignore fd.Close() errs in this function because we have only read
 		// from the file.
@@ -65,7 +68,60 @@ func OpenTable(file *os.File, options Options) (*Table, error) {
 		return nil, z.Wrap(err)
 	}
 
-	// fileName := fileInfo.Name()
+	fileName := fileInfo.Name()
+	partitionId, fileId, ok := ParseFileId(fileName)
+	if !ok {
+		_ = file.Close()
+		return nil, errors.Errorf("invalid filename: %s", fileName)
+	}
+
+	table := &Table{
+		file:        file,
+		references:  1, // Caller is given one reference.
+		partitionId: partitionId,
+		fileId:      fileId,
+		IsInMemory:  false,
+		options:     &opts,
+		tableSize:   int(fileInfo.Size()),
+	}
+
+	switch opts.LoadingMode {
+	case options.LoadToRAM:
+		// Move the cursor to the beginning of the file.
+		if _, err := table.file.Seek(0, io.SeekStart); err != nil {
+			return nil, err
+		}
+
+		// Setup the memory map so that we can fit the entire file in memory.
+		table.memoryMap = make([]byte, table.tableSize)
+
+		// Read the contents of the file into memory.
+		if n, err := table.file.Read(table.memoryMap); err != nil {
+			// It's okay to ignore the error here because we have only read from the file.
+			_ = table.file.Close()
+			return nil, z.Wrapf(err, "failed to load table file into memory")
+		} else if n != table.tableSize {
+			return nil, errors.Errorf(
+				"failed to read all bytes from the file. bytes in file/read: %d/%d",
+				table.tableSize,
+				n,
+			)
+		}
+	case options.MemoryMap:
+		// Use the memoryMap byte array to map the file.
+		if table.memoryMap, err = z.Mmap(file, false, int64(table.tableSize)); err != nil {
+			_ = table.file.Close()
+			return nil, z.Wrapf(err, "unable to map file: %q", fileInfo.Name())
+		}
+	case options.FileIO:
+		// If we are not loading the table into memory in any form then make sure the memory map table gets set to nil
+		// so that we don't use it.
+		table.memoryMap = nil
+	default:
+		panic(fmt.Sprintf("invalid loading mode: %v", opts.LoadingMode))
+	}
+
+	// TODO (elliotcourant) build init head and tail.
 
 	return nil, nil
 }

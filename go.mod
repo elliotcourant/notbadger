@@ -5,6 +5,7 @@ go 1.13
 require (
 	github.com/OneOfOne/xxhash v1.2.7
 	github.com/dgraph-io/ristretto v0.0.0-20191025175511-c1f00be0418e
+	github.com/dgryski/go-farm v0.0.0-20191112170834-c2139c5d712b
 	github.com/elliotcourant/timber v0.0.0-20190831033938-85b1f62dde82
 	github.com/pkg/errors v0.8.1
 	github.com/stretchr/testify v1.4.0

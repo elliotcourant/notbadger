@@ -7,7 +7,7 @@ import (
 )
 
 type (
-	// Options contains configurable options for Table/Builder.
+	// Options contains configurable options for Table/TableBuilder.
 	Options struct {
 		// Options for Opening/Building Table.
 

@@ -85,19 +85,15 @@ func (t *TableBuilder) addHelper(key []byte, value z.ValueStruct, valuePointerLe
 	}
 }
 
-func (h header) Encode1() []byte {
+// Encode returns the header in the form of a byte array. A more in depth explanation of this method is that it takes
+// the value of the header in memory and through pointer fuckery writes the raw value of the struct in memory to a
+// 4 byte array and returns that array. The reason this is done instead of using a binary encoding is that this is
+// SIGNIFICANTLY faster.
+// See: https://gist.github.com/jarifibrahim/30237927ff3a4b200d4907c97bd93f41
+func (h header) Encode() []byte {
 	var b [4]byte
 	*(*header)(unsafe.Pointer(&b[0])) = h
 	return b[:]
-}
-
-func (h header) Encode2() []byte {
-	return []byte{
-		uint8(h.overlap & 0xff),
-		uint8((h.overlap >> 8) & 0xff),
-		uint8(h.diff & 0xff),
-		uint8((h.diff >> 8) & 0xff),
-	}
 }
 
 // newBuffer is just a simple wrapper function to create a bytes.Buffer of a specific size easily.

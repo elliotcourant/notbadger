@@ -2,10 +2,12 @@ package table
 
 import (
 	"bytes"
+	"math"
+	"unsafe"
+
 	"github.com/dgryski/go-farm"
 	"github.com/elliotcourant/notbadger/pb"
 	"github.com/elliotcourant/notbadger/z"
-	"unsafe"
 )
 
 const (
@@ -80,9 +82,20 @@ func (t *TableBuilder) addHelper(key []byte, value z.ValueStruct, valuePointerLe
 		diffKey = t.keyDifference(key)
 	}
 
-	if len(diffKey) == 0 {
-
+	h := header{
+		overlap: uint16(len(key) - len(diffKey)),
+		diff:    uint16(len(diffKey)),
 	}
+
+	// Store the current entry's offset.
+	z.AssertTrue(uint32(t.buffer.Len()) < math.MaxInt32)
+	t.entryOffsets = append(t.entryOffsets, uint32(t.buffer.Len())-t.baseOffset)
+
+	// Write the 4 byte (uint16 - uint16) header.
+	t.buffer.Write(h.Encode())
+
+	// Followed by the diff key. The length for the diff key is in the last 2 bytes of the header immediately before this
+	t.buffer.Write(diffKey)
 }
 
 // Encode returns the header in the form of a byte array. A more in depth explanation of this method is that it takes

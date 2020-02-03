@@ -1,6 +1,8 @@
 package notbadger
 
-import "os"
+import (
+	"os"
+)
 
 func removeDir(dir string) {
 	if err := os.RemoveAll(dir); err != nil {

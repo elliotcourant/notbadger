@@ -39,7 +39,7 @@ type Options struct {
 
 	MaxTableSize        int64
 	LevelSizeMultiplier int
-	MaxLevels           int
+	MaxLevels           uint8
 	ValueThreshold      int
 	NumMemoryTables     int
 	// Changing BlockSize across DB runs will not break badger. The block size is
@@ -290,7 +290,7 @@ func (opt Options) WithMaxTableSize(val int64) Options {
 // WithLevelSizeMultiplier returns a new Options value with LevelSizeMultiplier set to the given
 // value.
 //
-// LevelSizeMultiplier sets the ratio between the maximum sizes of contiguous levels in the LSM.
+// LevelSizeMultiplier sets the ratio between the maximum sizes of contiguous partitions in the LSM.
 // Once a level grows to be larger than this ratio allowed, the compaction process will be
 //  triggered.
 //
@@ -302,10 +302,10 @@ func (opt Options) WithLevelSizeMultiplier(val int) Options {
 
 // WithMaxLevels returns a new Options value with MaxLevels set to the given value.
 //
-// Maximum number of levels of compaction allowed in the LSM.
+// Maximum number of partitions of compaction allowed in the LSM.
 //
 // The default value of MaxLevels is 7.
-func (opt Options) WithMaxLevels(val int) Options {
+func (opt Options) WithMaxLevels(val uint8) Options {
 	opt.MaxLevels = val
 	return opt
 }
@@ -538,9 +538,9 @@ func (opt Options) WithInMemory(b bool) Options {
 // WithZSTDCompressionLevel returns a new Options value with ZSTDCompressionLevel set
 // to the given value.
 //
-// The ZSTD compression algorithm supports 20 compression levels. The higher the compression
-// level, the better is the compression ratio but lower is the performance. Lower levels
-// have better performance and higher levels have better compression ratios.
+// The ZSTD compression algorithm supports 20 compression partitions. The higher the compression
+// level, the better is the compression ratio but lower is the performance. Lower partitions
+// have better performance and higher partitions have better compression ratios.
 // The default value of ZSTDCompressionLevel is 15.
 func (opt Options) WithZSTDCompressionLevel(cLevel int) Options {
 	opt.ZSTDCompressionLevel = cLevel

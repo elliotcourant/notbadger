@@ -77,12 +77,12 @@ type (
 		Compression options.CompressionType
 	}
 
-	// levelManifest contains information about LSM tree levels in the MANIFEST file.
+	// levelManifest contains information about LSM tree partitions in the MANIFEST file.
 	levelManifest struct {
 		Tables map[uint64]struct{}
 	}
 
-	// partitionManifest wraps all of the information for a specific partition and its levels and tables.
+	// partitionManifest wraps all of the information for a specific partition and its partitions and tables.
 	partitionManifest struct {
 		Levels []levelManifest
 		Tables map[uint64]TableManifest
@@ -338,7 +338,7 @@ func applyManifestChange(build *Manifest, change pb.ManifestChange) error {
 			Compression: options.CompressionType(change.Compression),
 		}
 
-		// If we are at a higher level then update the level array on the partition to match the new number of levels.
+		// If we are at a higher level then update the level array on the partition to match the new number of partitions.
 		for len(partition.Levels) <= int(change.Level) {
 			partition.Levels = append(partition.Levels, levelManifest{
 				Tables: make(map[uint64]struct{}),

@@ -1,6 +1,8 @@
 package notbadger
 
-import "github.com/elliotcourant/notbadger/table"
+import (
+	"github.com/elliotcourant/notbadger/table"
+)
 
 const (
 	lockFileName          = "LOCK"

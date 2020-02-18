@@ -72,13 +72,15 @@ func (l *levelHandler) validate() error {
 		}
 
 		if z.CompareKeys(l.tables[j-1].Largest(), l.tables[j].Smallest()) >= 0 {
+			// TODO (elliotcourant) Change this to use fmt.Errorf()
 			return errors.Errorf(
-				"inter: largest(j-1) \n%l\n vs smallest(j): \n%l\n: level=%d j=%d numTables=%d",
+				"inter: largest(j-1) \n%s\n vs smallest(j): \n%s\n: level=%d j=%d numTables=%d",
 				hex.Dump(l.tables[j-1].Largest()), hex.Dump(l.tables[j].Smallest()),
 				l.level, j, numTables)
 		}
 
 		if z.CompareKeys(l.tables[j].Smallest(), l.tables[j].Largest()) > 0 {
+			// TODO (elliotcourant) Change this to use fmt.Errorf()
 			return errors.Errorf(
 				"intra: %q vs %q: level=%d j=%d numTables=%d",
 				l.tables[j].Smallest(), l.tables[j].Largest(), l.level, j, numTables)

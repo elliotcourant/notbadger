@@ -177,6 +177,46 @@ func (t *Table) DecrementReference() error {
 	return nil
 }
 
+// Close closes the open table.  (Releases resources back to the OS.)
+func (t *Table) Close() error {
+	if t.options.LoadingMode == options.MemoryMap {
+		if err := z.Munmap(t.memoryMap); err != nil {
+			return err
+		}
+		t.memoryMap = nil
+	}
+
+	if t.file == nil {
+		return nil
+	}
+
+	return t.file.Close()
+}
+
+// Size is its file size in bytes
+func (t *Table) Size() int64 {
+	return int64(t.tableSize)
+}
+
+// FileId is the table's ID number used to generate the file name.
+func (t *Table) FileId() uint64 {
+	return t.fileId
+}
+
+func (t *Table) PartitionId() uint32 {
+	return t.partitionId
+}
+
+// Smallest is its smallest key, or nil if there are none
+func (t *Table) Smallest() []byte {
+	return t.smallest
+}
+
+// Largest is its largest key, or nil if there are none
+func (t *Table) Largest() []byte {
+	return t.largest
+}
+
 // size returns the total size in bytes of the block.
 func (b *block) size() int64 {
 	return int64(3*intSize /* Size of the offset, entriesIndexStart and checksumLength */ +

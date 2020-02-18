@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/elliotcourant/timber"
 	"path"
+	"path/filepath"
 	"strings"
 )
 
@@ -55,4 +56,9 @@ func ParseFileId(name string) (partitionId uint32, fileId uint64, ok bool) {
 
 func IdToFileName(partitionId uint32, fileId uint64) string {
 	return fmt.Sprintf("%08X%016X%s", partitionId, fileId, TableFileExtension)
+}
+
+// NewFilename should be named TableFilepath -- it combines the dir with the ID to make a table filepath.
+func NewFilename(partitionId uint32, fileId uint64, directory string) string {
+	return filepath.Join(directory, IdToFileName(partitionId, fileId))
 }

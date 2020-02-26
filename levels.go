@@ -6,6 +6,7 @@ import (
 	"github.com/elliotcourant/notbadger/z"
 	"github.com/elliotcourant/timber"
 	"golang.org/x/net/trace"
+	"math/rand"
 	"os"
 	"strings"
 	"sync"
@@ -14,6 +15,14 @@ import (
 )
 
 type (
+	// compactionPriority represents a unit of work that needs to be performed by the compactor.
+	compactionPriority struct {
+		partitionId PartitionId
+		level       uint8
+		score       float64
+		dropPrefix  []byte
+	}
+
 	levelsController struct {
 		eventLog   trace.EventLog
 		partitions map[PartitionId]*partitionLevels
@@ -299,6 +308,46 @@ func (l *levelsController) cleanupLevels() error {
 	}
 
 	return firstError
+}
+
+func (l *levelsController) startCompaction(closer *z.Closer) {
+	n := l.db.options.NumCompactors
+	closer.AddRunning(n - 1)
+	for i := 0; i < n; i++ {
+		go l.runWorker(closer)
+	}
+}
+
+func (l *levelsController) runWorker(closer *z.Closer) {
+	defer closer.Done()
+
+	randomDelay := time.NewTimer(time.Duration(rand.Int31n(1000)) * time.Millisecond)
+	select {
+	// Wait for a random amount of time, this is to offset the synchronization of the compaction workers.
+	case <-randomDelay.C:
+	// But if the database gets closed before this finishes then just exit.
+	case <-closer.HasBeenClosed():
+		randomDelay.Stop()
+		return
+	}
+
+	ticker := time.NewTimer(time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			// Gather the levels that need compaction.
+			priorities := l.pickCompactionLevels()
+		}
+	}
+}
+
+// pickCompactionLevels determines which levels in the database need compaction. This is based on the approach that
+// RocksDB takes, and is outlined here: https://github.com/facebook/rocksdb/wiki/Leveled-Compaction
+// This method must use the same exact criteria for guaranteeing compaction's progress that addLevel0Table uses.
+func (l *levelsController) pickCompactionLevels() (priorities []compactionPriority) {
+
 }
 
 func (p *partitionLevels) validate() error {

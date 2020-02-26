@@ -8,7 +8,7 @@ import (
 func TestIdToFileName(t *testing.T) {
 	name := IdToFileName(1234, 7574334)
 	assert.NotEmpty(t, name)
-	assert.Len(t, name, 24+len(TableFileExtension))
+	assert.Len(t, name, 24+len(FileExtension))
 }
 
 func TestParseFileId(t *testing.T) {
@@ -16,7 +16,7 @@ func TestParseFileId(t *testing.T) {
 		inPartitionId, inFileId := uint32(1234), uint64(24782134)
 		name := IdToFileName(inPartitionId, inFileId)
 		assert.NotEmpty(t, name)
-		assert.Len(t, name, 24+len(TableFileExtension))
+		assert.Len(t, name, 24+len(FileExtension))
 
 		partitionId, fileId, ok := ParseFileId(name)
 		assert.True(t, ok)
@@ -39,8 +39,13 @@ func TestParseFileId(t *testing.T) {
 		assert.False(t, ok)
 	})
 
-	t.Run("bad hexadecimal value", func(t *testing.T) {
+	t.Run("bad hexadecimal value 1", func(t *testing.T) {
 		_, _, ok := ParseFileId("000004Z200000000017A2536.sst")
+		assert.False(t, ok)
+	})
+
+	t.Run("bad hexadecimal value 1", func(t *testing.T) {
+		_, _, ok := ParseFileId("000004F200000000017ZZ536.sst")
 		assert.False(t, ok)
 	})
 }

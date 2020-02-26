@@ -15,7 +15,7 @@ const (
 )
 
 type (
-	TableBuilder struct {
+	Builder struct {
 		// buffer can be tests or hundreds of megabytes for a single file.
 		buffer *bytes.Buffer
 
@@ -34,8 +34,8 @@ type (
 	}
 )
 
-func NewTableBuilder(options Options) *TableBuilder {
-	return &TableBuilder{
+func NewBuilder(options Options) *Builder {
+	return &Builder{
 		buffer:     newBuffer(1 << 20),
 		tableIndex: pb.TableIndex{},
 		keyHashes:  make([]uint64, 0, 1024),
@@ -45,15 +45,15 @@ func NewTableBuilder(options Options) *TableBuilder {
 
 // Close closes the table builder. This currently does nothing. Maybe it implements an interface somewhere, the world
 // may never know. I'm just porting BadgerDB. TODO (elliotcourant) wtf is this here for?
-func (t *TableBuilder) Close() {}
+func (t *Builder) Close() {}
 
 // Empty will return true if nothing has been written to the buffer yet.
-func (t *TableBuilder) Empty() bool {
+func (t *Builder) Empty() bool {
 	return t.buffer.Len() == 0
 }
 
 // keyDifference returns a suffix of the provided newKey that is different from the table builder's baseKey.
-func (t *TableBuilder) keyDifference(newKey []byte) []byte {
+func (t *Builder) keyDifference(newKey []byte) []byte {
 	var i int
 	for i = 0; i < len(newKey) && i < len(t.baseKey); i++ {
 		if newKey[i] != t.baseKey[i] {
@@ -64,7 +64,7 @@ func (t *TableBuilder) keyDifference(newKey []byte) []byte {
 	return newKey[i:]
 }
 
-func (t *TableBuilder) addHelper(key []byte, value z.ValueStruct, valuePointerLength uint64) {
+func (t *Builder) addHelper(key []byte, value z.ValueStruct, valuePointerLength uint64) {
 	// TODO (elliotcourant) Benchmark farm hash against crc and xxhash.
 	t.keyHashes = append(t.keyHashes, farm.Fingerprint64(z.ParseKey(key)))
 

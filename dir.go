@@ -8,5 +8,5 @@ const (
 	lockFileName          = "LOCK"
 	keyRegistryFileName   = "KEYREGISTRY"
 	valueLogFileExtension = ".vlog"
-	tableFileExtension    = table.TableFileExtension
+	tableFileExtension    = table.FileExtension
 )

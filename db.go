@@ -40,6 +40,9 @@ type (
 		partitionsReadLock  sync.RWMutex
 		partitionsWriteLock sync.Mutex
 
+		// levelsController manages the individual tables for each partition.
+		levelsController *levelsController
+
 		valueLog valueLog
 
 		// less than or equal to a pointer to the last valueLog value put into any of the partitions active table.
@@ -180,7 +183,7 @@ func Open(opts Options) (db *DB, err error) {
 	}
 
 	// Open/create the manifest file. This will give us the initial state of our entire database.
-	manifestFile, _, err := openOrCreateManifestFile(opts)
+	manifestFile, manifest, err := openOrCreateManifestFile(opts)
 	if err != nil {
 		return nil, err
 	}
@@ -255,6 +258,16 @@ func Open(opts Options) (db *DB, err error) {
 	db.partitions[0] = &partitionMemoryTables{
 		active:  skiplist.NewSkiplist(arenaSize(db.options)),
 		flushed: make([]*skiplist.SkipList, db.options.NumMemoryTables),
+	}
+
+	// newLevelsController potentially loads files in the directory.
+	if db.levelsController, err = newLevelsController(db, &manifest); err != nil {
+		return nil, err
+	}
+
+	if !opts.ReadOnly {
+		db.closers.compactors = z.NewCloser(1)
+		// TODO left off here.
 	}
 
 	valueDirectoryLockGuard = nil

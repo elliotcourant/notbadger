@@ -19,9 +19,9 @@ const (
 )
 
 type (
-	// TableInterface is apparently useful for testing.
+	// Interface is apparently useful for testing.
 	// TODO (elliotcourant) Add documentation on what this is used for.
-	TableInterface interface {
+	Interface interface {
 		Smallest() []byte // Head
 		Biggest() []byte  // Tail
 		DoesNotHave(hash uint64) bool

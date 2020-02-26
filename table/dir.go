@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	TableFileExtension  = ".sst"
-	TableFileNameLength = 24
+	FileExtension  = ".sst"
+	FileNameLength = 24
 )
 
 // ParseFileId reads the file name into a partitionId and fileId, if the file name could not be parsed then this method
@@ -21,15 +21,15 @@ func ParseFileId(name string) (partitionId uint32, fileId uint64, ok bool) {
 	name = path.Base(name)
 
 	// Make sure the provided file has the correct file extension.
-	if !strings.HasSuffix(name, TableFileExtension) {
+	if !strings.HasSuffix(name, FileExtension) {
 		// The file does not have the write file extension so it's not a valid table file. We should simply return now.
 		return
 	}
 
-	name = strings.TrimSuffix(name, TableFileExtension)
+	name = strings.TrimSuffix(name, FileExtension)
 
 	// If the file name is not long enough or is too long then the file is not valid and we should return.
-	if len(name) != TableFileNameLength {
+	if len(name) != FileNameLength {
 		return
 	}
 
@@ -55,7 +55,7 @@ func ParseFileId(name string) (partitionId uint32, fileId uint64, ok bool) {
 }
 
 func IdToFileName(partitionId uint32, fileId uint64) string {
-	return fmt.Sprintf("%08X%016X%s", partitionId, fileId, TableFileExtension)
+	return fmt.Sprintf("%08X%016X%s", partitionId, fileId, FileExtension)
 }
 
 // NewFilename should be named TableFilepath -- it combines the dir with the ID to make a table filepath.
